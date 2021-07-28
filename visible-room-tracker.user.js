@@ -8,61 +8,56 @@
 // @include      https://screeps.com/a/
 // @run-at       document-ready
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js
-// @require      https://github.com/Esryok/screeps-browser-ext/raw/master/screeps-browser-core.js
-// @downloadUrl  https://github.com/Esryok/screeps-browser-ext/raw/master/visible-room-tracker.user.js
+// @require      https://github.com/thmsndk/screeps-browser-ext/raw/master/screeps-browser-core.js
+// @downloadUrl  https://github.com/thmsndk/screeps-browser-ext/raw/master/visible-room-tracker.user.js
 // ==/UserScript==
 
 // Entry point
 $(document).ready(() => {
-    let monitorRunning = false;
-    ScreepsAdapter.onRoomChange(function (roomName) {
-        console.log("Visible room changed to:", roomName);
-        
-        function notifyCurrentRoomVisibility() {
-            let roomElem = angular.element('.room');
-            let roomScope = roomElem.scope();
+  let monitorRunning = false;
+  ScreepsAdapter.onRoomChange(function (roomName) {
+    console.log("Visible room changed to:", roomName);
 
-            let tick = roomScope.Room.gameTime;
-            if (tick !== undefined && roomScope.historyTimestamp === undefined) {
-                ScreepsAdapter.Connection.setMemoryByPath(
-                    null,
-                    "rooms." + roomScope.Room.roomName + ".lastViewed",
-                    roomScope.Room.gameTime
-                );
-            }
-        }
+    function notifyCurrentRoomVisibility() {
+      let roomElem = angular.element(".room");
+      let roomScope = roomElem.scope();
 
-        function ensureRoomMonitor() {
-            let roomElem = angular.element('.room');
-            if (!roomElem || roomElem.length === 0) {
-                setTimeout(ensureRoomMonitor, 250);
-                return;
-            }
+      let tick = roomScope.Room.gameTime;
+      if (tick !== undefined && roomScope.historyTimestamp === undefined) {
+        ScreepsAdapter.Connection.setMemoryByPath(
+          null,
+          "rooms." + roomScope.Room.roomName + ".lastViewed",
+          roomScope.Room.gameTime
+        );
+      }
+    }
 
-            notifyCurrentRoomVisibility();
+    function ensureRoomMonitor() {
+      let roomElem = angular.element(".room");
+      if (!roomElem || roomElem.length === 0) {
+        setTimeout(ensureRoomMonitor, 250);
+        return;
+      }
 
-            if (monitorRunning)
-                return;
+      notifyCurrentRoomVisibility();
 
-            let roomScope = roomElem.scope();
-            roomScope.$watch(() => roomScope.Room.gameTime, notifyCurrentRoomVisibility);
-            monitorRunning = true;
-        }
+      if (monitorRunning) return;
 
-        if (roomName && roomName !== "sim") {
-            ScreepsAdapter.Connection.getMemoryByPath(null, "rooms." + roomName).then((baseRoomData) => {
-                if (!baseRoomData) {
-                    ScreepsAdapter.Connection.setMemoryByPath(
-                        null,
-                        "rooms." + roomName,
-                        {}
-                    ).then(ensureRoomMonitor);
-                } else {
-                    ensureRoomMonitor();
-                }
-            });
+      let roomScope = roomElem.scope();
+      roomScope.$watch(() => roomScope.Room.gameTime, notifyCurrentRoomVisibility);
+      monitorRunning = true;
+    }
+
+    if (roomName && roomName !== "sim") {
+      ScreepsAdapter.Connection.getMemoryByPath(null, "rooms." + roomName).then((baseRoomData) => {
+        if (!baseRoomData) {
+          ScreepsAdapter.Connection.setMemoryByPath(null, "rooms." + roomName, {}).then(ensureRoomMonitor);
         } else {
-            monitorRunning = false;
+          ensureRoomMonitor();
         }
-    });
+      });
+    } else {
+      monitorRunning = false;
+    }
+  });
 });
